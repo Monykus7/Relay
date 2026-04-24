@@ -1,2 +1,2 @@
 # Relay
-A solution for nurse shift passing
+A solution for nurse shift notes
