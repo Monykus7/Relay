@@ -1,0 +1,391 @@
+# Cursor Prompt — Wire HandoffAI Frontend to Backend
+
+> Paste everything below the divider into Cursor's chat. Cursor has access to all files in the workspace, so it can edit them directly. This prompt covers both the frontend wiring and a small backend tweak that makes session history work end-to-end.
+
+---
+
+## Task
+
+Wire the HandoffAI frontend (HTML + Babel-in-browser, no build step) to the FastAPI backend. Replace placeholder data with real API calls. Keep certain mocks intentionally — see "What stays mocked" below.
+
+## Backend endpoints available
+
+- `POST /api/decode` — body `{raw_text, nurse_label?, shift_label?}` → `{id, patients: [...], global_glossary, confidence, ambiguities}`. Each patient has `{id, room, name_or_label, sbar, flags, open_loops, abbreviations_used}`.
+- `GET /api/patients/by-room/{room}` → array of patient records with `{id, handoff_id, created_at, room, name_or_label, sbar, flags, open_loops, verified, nurse_label, shift_label}`.
+- `POST /api/patient-records/{record_id}/verify` → `{verified: true}`.
+- `GET /health` → status check.
+
+## What stays mocked (intentional, do not change)
+
+- `window.PATIENTS` array — this is the nurse's assigned patient roster. In production it would come from an EHR integration (Epic/Cerner). Out of scope for the hackathon.
+- `window.NURSE` object — represents the logged-in user. No auth in scope.
+- `window.SYSTEM_PROMPT` — can be removed since backend owns it now, but harmless to keep.
+
+## What gets replaced
+
+- `window.NVIDIA_API_KEY` and the direct NVIDIA call from `screen2.jsx` — frontend should never have the key.
+- `window.MOCK_NOTES` — replaced by `/api/decode` response. Keep as offline fallback only.
+- `window.SESSION_HISTORY` — replaced by `/api/patients/by-room/{room}` response. Keep as offline fallback only.
+
+## File-by-file changes
+
+### 1. `HandoffAI.html` — config block
+
+Find this line:
+```js
+window.NVIDIA_API_KEY = 'YOUR_KEY_HERE';
+```
+
+Replace it with:
+```js
+window.BACKEND_URL = 'http://localhost:8000';
+```
+
+For the deployed Render version, the user will edit this manually to their Render URL before deploying. Do not hardcode a Render URL.
+
+Leave `window.NURSE`, `window.PATIENTS`, `window.MOCK_NOTES`, `window.SESSION_HISTORY`, and `window.SYSTEM_PROMPT` in place. The mock data stays as offline fallback.
+
+### 2. `screen2.jsx` — RecordingScreen
+
+Replace the entire `handleProcess` function with this version. It calls the backend instead of NVIDIA directly, passes the nurse name for session history attribution, and threads the IDs through to the next screen.
+
+```jsx
+const handleProcess = async () => {
+  if (recording) {
+    recognitionRef.current?.stop();
+    setRecording(false);
+  }
+  setProcessing(true);
+
+  const backendUrl = window.BACKEND_URL || 'http://localhost:8000';
+
+  try {
+    const res = await fetch(`${backendUrl}/api/decode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        raw_text: transcript,
+        nurse_label: `${NURSE.name}, ${NURSE.credentials}`,
+        shift_label: NURSE.shift,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `Backend ${res.status}` }));
+      throw new Error(err.detail || `Backend returned ${res.status}`);
+    }
+
+    const data = await res.json();
+    // Backend returns {id, patients: [...]}. Single-patient dictation returns one entry.
+    const patientRecord = data.patients?.[0];
+    if (!patientRecord) throw new Error('Backend returned no patient records');
+
+    // Reshape to the structure NotesPreviewScreen expects, plus pass IDs through
+    const notes = {
+      sbar: patientRecord.sbar,
+      flags: patientRecord.flags || [],
+      open_loops: patientRecord.open_loops || [],
+      abbreviations_used: patientRecord.abbreviations_used || [],
+      _handoff_id: data.id,
+      _record_id: patientRecord.id,
+    };
+
+    setProcessing(false);
+    onProcessed(notes, transcript);
+  } catch (err) {
+    console.error('Backend decode failed, falling back to mock:', err);
+    setProcessing(false);
+    // Offline fallback so the demo doesn't die if backend is down
+    const fallback = MOCK_NOTES[patient.id] || MOCK_NOTES['p1'];
+    onProcessed({ ...fallback, _handoff_id: null, _record_id: null }, transcript);
+  }
+};
+```
+
+The `_handoff_id` and `_record_id` fields are stashed inside the notes object so they thread through `app.jsx` state without changing the function signatures of `onProcessed`/`onApprove`.
+
+### 3. `screen3.jsx` — NotesPreviewScreen
+
+Update `handleApprove` to call the verify endpoint before navigating forward. Don't block on the response — verify is best-effort, the user keeps moving regardless.
+
+Replace the existing `handleApprove`:
+
+```jsx
+const handleApprove = async () => {
+  setApproved(true);
+
+  // Best-effort verify call — don't block UI on it
+  const recordId = editedNotes._record_id;
+  if (recordId) {
+    const backendUrl = window.BACKEND_URL || 'http://localhost:8000';
+    fetch(`${backendUrl}/api/patient-records/${recordId}/verify`, { method: 'POST' })
+      .catch(err => console.warn('Verify call failed (non-blocking):', err));
+  }
+
+  setTimeout(() => onApprove(editedNotes, transcript), 600);
+};
+```
+
+The `editedNotes._record_id` flows through because Screen 2 stashed it on the notes object. The `JSON.parse(JSON.stringify(notes))` at the top of the component preserves the ID through the deep clone.
+
+### 4. `screen4.jsx` — PatientInfoScreen
+
+This is the biggest change. Replace the line `const history = SESSION_HISTORY[patient.id] || [];` with a stateful fetch.
+
+At the top of the `PatientInfoScreen` function, replace:
+```jsx
+const history = SESSION_HISTORY[patient.id] || [];
+```
+
+With:
+```jsx
+const [history, setHistory] = React.useState([]);
+const [historyLoading, setHistoryLoading] = React.useState(true);
+const currentRecordId = approvedNotes?._record_id;
+
+React.useEffect(() => {
+  const backendUrl = window.BACKEND_URL || 'http://localhost:8000';
+  let cancelled = false;
+
+  const loadHistory = async () => {
+    try {
+      const res = await fetch(`${backendUrl}/api/patients/by-room/${encodeURIComponent(patient.room)}?limit=10`);
+      if (!res.ok) throw new Error(`Backend ${res.status}`);
+      const records = await res.json();
+      if (cancelled) return;
+
+      // Filter out the current record (it's shown separately as "This session")
+      const others = records.filter(r => r.id !== currentRecordId);
+
+      // Map backend shape -> SessionCard prop shape
+      const mapped = others.map(r => ({
+        id: r.id,
+        nurse: r.nurse_label || 'Previous shift',
+        nurse_id: '—',
+        timestamp: new Date(r.created_at).toLocaleString([], {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        }),
+        shift: r.shift_label || _deriveShiftFromTime(r.created_at),
+        flags: r.flags || [],
+        summary: r.sbar?.situation || '',
+      }));
+
+      setHistory(mapped);
+    } catch (err) {
+      console.warn('History fetch failed, falling back to mock:', err);
+      if (!cancelled) setHistory(SESSION_HISTORY[patient.id] || []);
+    } finally {
+      if (!cancelled) setHistoryLoading(false);
+    }
+  };
+
+  loadHistory();
+  return () => { cancelled = true; };
+}, [patient.room, currentRecordId]);
+
+// Derive a shift label from timestamp if backend didn't provide one
+function _deriveShiftFromTime(iso) {
+  const h = new Date(iso).getHours();
+  if (h >= 7 && h < 19) return 'Day shift';
+  return 'Night shift';
+}
+```
+
+In the JSX where session history is rendered, find this block:
+
+```jsx
+{[...history].reverse().map(s => (
+  <SessionCard ... />
+))}
+```
+
+Replace with a loading-aware version:
+
+```jsx
+{historyLoading ? (
+  <div style={{ fontSize: 12, color: '#94A3B8', padding: '12px 0', fontStyle: 'italic' }}>
+    Loading session history…
+  </div>
+) : history.length === 0 ? (
+  <div style={{ fontSize: 12, color: '#94A3B8', padding: '12px 0', fontStyle: 'italic' }}>
+    No prior sessions for this room.
+  </div>
+) : (
+  history.map(s => (
+    <SessionCard
+      key={s.id}
+      nurse={s.nurse}
+      nurseId={s.nurse_id}
+      timestamp={s.timestamp}
+      shift={s.shift}
+      flags={s.flags}
+      summary={s.summary}
+    />
+  ))
+)}
+```
+
+Note: backend returns history sorted newest-first already, so the `.reverse()` from the original code goes away.
+
+Also update the session count badge — the existing line `{history.length + 1} sessions` still works since both are arrays.
+
+### 5. `data.js`
+
+This file isn't actually loaded by the HTML at runtime (the HTML inlines its own data block), but keep it in sync for consistency. Remove the `window.NVIDIA_API_KEY` reference if present, add `window.BACKEND_URL`. The mock data structures stay for offline fallback.
+
+## Backend tweak — `main.py` and `db.py`
+
+Three small changes so the frontend's `nurse_label` actually flows end-to-end.
+
+### `models.py` — extend the request model
+
+Find `DecodeRequest` and update:
+
+```python
+class DecodeRequest(BaseModel):
+    raw_text: str = Field(..., min_length=10, max_length=10000)
+    nurse_label: Optional[str] = None
+    shift_label: Optional[str] = None
+```
+
+### `db.py` — `save_handoff` accepts the new fields
+
+Update the signature and the INSERT:
+
+```python
+async def save_handoff(
+    raw_input: str,
+    response: dict,
+    nurse_label: Optional[str] = None,
+    shift_label: Optional[str] = None,
+) -> str:
+    pool = _pool_or_raise()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            handoff_id = await conn.fetchval(
+                """
+                INSERT INTO handoffs (raw_input, structured_output, confidence, nurse_label, shift_label)
+                VALUES ($1, $2::jsonb, $3, $4, $5)
+                RETURNING id
+                """,
+                raw_input,
+                json.dumps(response),
+                response.get("confidence", "medium"),
+                nurse_label,
+                shift_label,
+            )
+            # ... rest of the function unchanged ...
+```
+
+### `db.py` — `get_patient_history_by_room` joins handoffs
+
+Update the query to pull nurse/shift labels from the parent handoff:
+
+```python
+async def get_patient_history_by_room(room: str, limit: int = 10) -> list[dict]:
+    pool = _pool_or_raise()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT pr.id, pr.handoff_id, pr.created_at, pr.room, pr.name_or_label,
+                   pr.sbar, pr.flags, pr.open_loops, pr.verified,
+                   h.nurse_label, h.shift_label
+            FROM patient_records pr
+            LEFT JOIN handoffs h ON h.id = pr.handoff_id
+            WHERE pr.room = $1
+            ORDER BY pr.created_at DESC
+            LIMIT $2
+            """,
+            room,
+            limit,
+        )
+        return [
+            {
+                "id": str(r["id"]),
+                "handoff_id": str(r["handoff_id"]),
+                "created_at": r["created_at"].isoformat(),
+                "room": r["room"],
+                "name_or_label": r["name_or_label"],
+                "sbar": json.loads(r["sbar"]),
+                "flags": json.loads(r["flags"]),
+                "open_loops": json.loads(r["open_loops"]),
+                "verified": r["verified"],
+                "nurse_label": r["nurse_label"],
+                "shift_label": r["shift_label"],
+            }
+            for r in rows
+        ]
+```
+
+### `main.py` — pass new fields through `/api/decode`
+
+Find the line `handoff_id = await db.save_handoff(req.raw_text, response_dict)` and update:
+
+```python
+handoff_id = await db.save_handoff(
+    req.raw_text,
+    response_dict,
+    nurse_label=req.nurse_label,
+    shift_label=req.shift_label,
+)
+```
+
+## Verification — run after Cursor finishes
+
+Open two terminals.
+
+**Terminal 1 — backend:**
+```bash
+cd handoffai-backend
+source .venv/bin/activate
+uvicorn main:app --reload --port 8000
+```
+
+**Terminal 2 — frontend (just serve the HTML):**
+```bash
+cd Relay
+python3 -m http.server 5173
+```
+
+Then open `http://localhost:5173/HandoffAI.html` in Chrome.
+
+**Click-through test:**
+1. Patient list loads with 5 mock patients ✓
+2. Click Mrs. Chen (Room 412) → Recording screen
+3. Type or dictate: "Post-op TKR day 1, vitals stable, K+ was 3.1 this AM repleted with 40 mEq PO, recheck in AM, NKDA. Daughter called twice tonight, wants to talk to surgeon."
+4. Click "Stop & generate notes" → Notes preview shows real SBAR from Nemotron (not the static mock)
+5. Click "Approve & save" → Patient info screen
+6. Session history shows the just-saved session as "This session" + "No prior sessions for this room" below
+7. Click "Go to another patient" → back to list
+8. Click Mrs. Chen again, dictate something different, approve
+9. Now Patient info shows TWO sessions: current + previous (from step 5)
+
+If step 9 works, the database integration is fully wired.
+
+**Curl spot-checks:**
+```bash
+# Confirm decode persists
+curl -X POST http://localhost:8000/api/decode \
+  -H "Content-Type: application/json" \
+  -d '{"raw_text":"Room 412 test handoff for K+ 3.1 NKDA","nurse_label":"Test Nurse, RN","shift_label":"Night"}'
+
+# Confirm by-room returns it with nurse_label populated
+curl http://localhost:8000/api/patients/by-room/412
+```
+
+## Common things that go wrong
+
+- **CORS errors in browser console.** Make sure the backend's `ALLOWED_ORIGINS` env var includes `http://localhost:5173`. Already there if you used the cheat sheet.
+- **`data.patients?.[0]` is undefined.** Backend returned an empty patients array — usually means Nemotron returned valid JSON with `patients: []`. Check the backend logs for the raw model output. Tweak the system prompt to be more insistent that single-patient dictation should still produce one patient entry.
+- **Verify call returns 404.** The `_record_id` got lost between screens. Check that `editedNotes._record_id` exists in `screen3.jsx` — the `JSON.parse(JSON.stringify(notes))` clone should preserve it.
+- **Session history empty even after multiple decodes.** Check that the backend actually persisted them: hit `/api/handoffs?limit=5` and look for rows. If they exist, the room field on patient_records may not match. Add a `console.log(patient.room)` in screen4 and compare with what's in Supabase Table Editor.
+- **`nurse_label` always null in history.** The backend tweaks didn't get applied. Check `models.py` for the field, restart uvicorn (auto-reload sometimes misses Pydantic schema changes).
+
+## What this gets you for the demo
+
+- Real Nemotron-generated SBAR on every recording — no more identical canned output.
+- Persisted handoffs across page reloads and across patient navigation.
+- Session history that grows organically as you do more recordings.
+- The "two recordings same room" demo beat: live evidence the system tracks continuity.
+- Verified-state writes through to Postgres so you can show judges the database directly if they ask.
