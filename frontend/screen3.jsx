@@ -1,7 +1,9 @@
 // HandoffAI — Screen 3: Notes Preview (Review & Approve)
 
 function NotesPreviewScreen({ patient, notes, transcript, onBack, onApprove }) {
-  const [editedNotes, setEditedNotes] = React.useState(() => JSON.parse(JSON.stringify(notes)));
+  const [editedNotes, setEditedNotes] = React.useState(() =>
+    normalizeHandoffNotesForEditor(JSON.parse(JSON.stringify(notes)))
+  );
   const [checkedLoops, setCheckedLoops] = React.useState({});
   const [approved, setApproved] = React.useState(false);
 

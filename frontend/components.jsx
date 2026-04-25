@@ -92,12 +92,21 @@ function IconUsers({ size = 16 }) {
 // ── FlagChip ──────────────────────────────────────────────────────────────
 function FlagChip({ flag, small }) {
   const [showTip, setShowTip] = React.useState(false);
+  const f =
+    typeof flag === 'string'
+      ? { level: 'amber', label: flag.trim() || '—', source: flag }
+      : flag && typeof flag === 'object'
+        ? flag
+        : { level: 'amber', label: '—', source: '' };
+  const level = ['red', 'amber', 'green'].includes(f.level) ? f.level : 'amber';
+  const label = f.label != null && String(f.label).trim() !== '' ? f.label : '—';
+  const source = f.source != null ? String(f.source) : '';
   const colors = {
     red:   { bg: '#FEF2F2', text: '#991B1B', border: '#FECACA', dot: '#EF4444' },
     amber: { bg: '#FFFBEB', text: '#92400E', border: '#FDE68A', dot: '#F59E0B' },
     green: { bg: '#F0FDF4', text: '#166534', border: '#BBF7D0', dot: '#22C55E' },
   };
-  const c = colors[flag.level] || colors.amber;
+  const c = colors[level] || colors.amber;
   return (
     <span
       style={{
@@ -111,12 +120,12 @@ function FlagChip({ flag, small }) {
         fontWeight: 500,
         whiteSpace: 'nowrap',
       }}
-      onMouseEnter={() => flag.source && setShowTip(true)}
+      onMouseEnter={() => source && setShowTip(true)}
       onMouseLeave={() => setShowTip(false)}
     >
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: c.dot, flexShrink: 0 }}></span>
-      {flag.label}
-      {showTip && flag.source && (
+      {label}
+      {showTip && source && (
         <span style={{
           position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
           transform: 'translateX(-50%)',
@@ -128,7 +137,7 @@ function FlagChip({ flag, small }) {
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         }}>
           <span style={{ color: '#94A3B8', display: 'block', marginBottom: 2, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Source</span>
-          "{flag.source}"
+          "{source}"
         </span>
       )}
     </span>
@@ -226,6 +235,42 @@ function CollapsibleSection({ title, defaultOpen = false, children, accent }) {
   );
 }
 
+/** Normalize API/mock notes so flags/open_loops match editor + FlagChip shape. */
+function normalizeHandoffNotesForEditor(notes) {
+  if (!notes || typeof notes !== 'object') return {};
+  const out = { ...notes };
+  out.flags = (Array.isArray(out.flags) ? out.flags : []).map((f) => {
+    if (typeof f === 'string') {
+      const s = f.trim();
+      return { level: 'amber', label: s || '—', source: s };
+    }
+    if (f && typeof f === 'object') {
+      const level = ['red', 'amber', 'green'].includes(f.level) ? f.level : 'amber';
+      const lab = (f.label || f.text || '').toString().trim();
+      return {
+        level,
+        label: lab || '—',
+        source: (f.source || f.label || '').toString(),
+      };
+    }
+    return { level: 'amber', label: '—', source: '' };
+  });
+  out.open_loops = (Array.isArray(out.open_loops) ? out.open_loops : []).map((loop) => {
+    if (typeof loop === 'string') {
+      const t = loop.trim();
+      return { task: t || '—', owner: 'other', deadline: null };
+    }
+    if (loop && typeof loop === 'object') {
+      const task = (loop.task || loop.text || loop.description || '').toString().trim();
+      let owner = loop.owner || 'other';
+      if (!['incoming_nurse', 'md', 'pharmacy', 'other'].includes(owner)) owner = 'other';
+      return { task: task || '—', owner, deadline: loop.deadline ?? null };
+    }
+    return { task: '—', owner: 'other', deadline: null };
+  });
+  return out;
+}
+
 // ── Waveform animation (recording indicator) ──────────────────────────────
 function Waveform() {
   return (
@@ -255,4 +300,5 @@ Object.assign(window, {
   IconArrowLeft, IconUser, IconClock, IconAlertCircle, IconEdit, IconUsers,
   // Components
   FlagChip, OwnerBadge, AppHeader, CollapsibleSection, Waveform,
+  normalizeHandoffNotesForEditor,
 });

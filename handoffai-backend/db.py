@@ -114,8 +114,8 @@ async def save_handoff(
                     """
                     INSERT INTO patient_records
                         (handoff_id, room, name_or_label, sbar,
-                         flags, open_loops, abbreviations_used)
-                    VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb)
+                         flags, open_loops, abbreviations_used, vitals_summary)
+                    VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8)
                     RETURNING id
                     """,
                     handoff_id,
@@ -125,6 +125,7 @@ async def save_handoff(
                     json.dumps(patient.get("flags", [])),
                     json.dumps(patient.get("open_loops", [])),
                     json.dumps(patient.get("abbreviations_used", [])),
+                    patient.get("vitals_summary"),
                 )
                 patient_ids.append(str(rid))
 
@@ -164,7 +165,7 @@ async def get_patient_history_by_room(room: str, limit: int = 10) -> list[dict]:
         rows = await conn.fetch(
             """
             SELECT pr.id, pr.handoff_id, pr.created_at, pr.room, pr.name_or_label,
-                   pr.sbar, pr.flags, pr.open_loops, pr.verified,
+                   pr.sbar, pr.flags, pr.open_loops, pr.verified, pr.vitals_summary,
                    h.nurse_label, h.shift_label
             FROM patient_records pr
             LEFT JOIN handoffs h ON h.id = pr.handoff_id
@@ -203,7 +204,7 @@ def _row_to_handoff(row) -> dict:
 
 
 def _row_to_patient(row) -> dict:
-    return {
+    out = {
         "id": str(row["id"]),
         "handoff_id": str(row["handoff_id"]),
         "created_at": row["created_at"].isoformat(),
@@ -216,3 +217,7 @@ def _row_to_patient(row) -> dict:
         "nurse_label": row["nurse_label"],
         "shift_label": row["shift_label"],
     }
+    vs = row.get("vitals_summary")
+    if vs is not None:
+        out["vitals_summary"] = vs
+    return out

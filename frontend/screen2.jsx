@@ -86,6 +86,7 @@ function RecordingScreen({ patient, onBack, onProcessed }) {
         flags: patientRecord.flags || [],
         open_loops: patientRecord.open_loops || [],
         abbreviations_used: patientRecord.abbreviations_used || [],
+        vitals_summary: patientRecord.vitals_summary || null,
         _handoff_id: data.id,
         _record_id: patientRecord.id,
       };

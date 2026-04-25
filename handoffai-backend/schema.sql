@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS patient_records (
     flags JSONB NOT NULL DEFAULT '[]'::jsonb,
     open_loops JSONB NOT NULL DEFAULT '[]'::jsonb,
     abbreviations_used JSONB NOT NULL DEFAULT '[]'::jsonb,
+    vitals_summary TEXT,
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -36,3 +37,6 @@ CREATE INDEX IF NOT EXISTS idx_patient_records_room
     ON patient_records (room) WHERE room IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_patient_records_created_at
     ON patient_records (created_at DESC);
+
+-- One-time for existing databases created before vitals_summary existed:
+ALTER TABLE patient_records ADD COLUMN IF NOT EXISTS vitals_summary TEXT;

@@ -12,6 +12,7 @@ class PatientItem(BaseModel):
     flags: list[Any] = Field(default_factory=list)
     open_loops: list[Any] = Field(default_factory=list)
     abbreviations_used: list[Any] = Field(default_factory=list)
+    vitals_summary: Optional[str] = None
 
 
 class DecodeRequest(BaseModel):

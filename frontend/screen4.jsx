@@ -6,6 +6,42 @@ function _deriveShiftFromTime(iso) {
   return 'Night shift';
 }
 
+function _coerceFlagForUi(f) {
+  if (typeof f === 'string') {
+    const s = f.trim();
+    return { level: 'amber', label: s || '—', source: s };
+  }
+  if (f && typeof f === 'object') {
+    const level = ['red', 'amber', 'green'].includes(f.level) ? f.level : 'amber';
+    const lab = (f.label || f.text || '').toString().trim();
+    return {
+      level,
+      label: lab || '—',
+      source: (f.source || f.label || '').toString(),
+    };
+  }
+  return { level: 'amber', label: '—', source: '' };
+}
+
+function _coerceFlagList(flags) {
+  if (!Array.isArray(flags)) return [];
+  return flags.map(_coerceFlagForUi);
+}
+
+function _coerceOpenLoop(loop) {
+  if (typeof loop === 'string') {
+    const t = loop.trim();
+    return { task: t || '—', owner: 'other', deadline: null };
+  }
+  if (loop && typeof loop === 'object') {
+    const task = (loop.task || loop.text || loop.description || '').toString().trim();
+    let owner = loop.owner || 'other';
+    if (!['incoming_nurse', 'md', 'pharmacy', 'other'].includes(owner)) owner = 'other';
+    return { task: task || '—', owner, deadline: loop.deadline ?? null };
+  }
+  return { task: '—', owner: 'other', deadline: null };
+}
+
 function PatientInfoScreen({ patient, approvedNotes, onGoToPatients }) {
   const [history, setHistory] = React.useState([]);
   const [historyLoading, setHistoryLoading] = React.useState(true);
@@ -38,7 +74,7 @@ function PatientInfoScreen({ patient, approvedNotes, onGoToPatients }) {
             minute: '2-digit',
           }),
           shift: r.shift_label || _deriveShiftFromTime(r.created_at),
-          flags: Array.isArray(r.flags) ? r.flags : [],
+          flags: _coerceFlagList(r.flags),
           summary: r.sbar?.situation || '',
         }));
 
@@ -124,14 +160,14 @@ function PatientInfoScreen({ patient, approvedNotes, onGoToPatients }) {
           </div>
           <div style={{ padding: '14px 20px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {notes.flags && notes.flags.length > 0
-              ? notes.flags.map((f, i) => <FlagChip key={i} flag={f} />)
+              ? _coerceFlagList(notes.flags).map((f, i) => <FlagChip key={i} flag={f} />)
               : <span style={{ fontSize: 13, color: '#94A3B8' }}>No flags recorded.</span>
             }
           </div>
         </div>
 
         {/* ── ALWAYS VISIBLE: Open Loops ── */}
-        <OpenLoopsCard loops={notes.open_loops} />
+        <OpenLoopsCard loops={(notes.open_loops || []).map(_coerceOpenLoop)} />
 
         {/* ── COLLAPSIBLE: SBAR ── */}
         <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.04)', marginBottom: 12, overflow: 'hidden' }}>
@@ -144,7 +180,12 @@ function PatientInfoScreen({ patient, approvedNotes, onGoToPatients }) {
         <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.04)', marginBottom: 12, overflow: 'hidden' }}>
           <CollapsibleSection title="Vitals & Access">
             <InfoGrid rows={[
-              ['Last vitals', patient.vitals_summary],
+              [
+                notes.vitals_summary && String(notes.vitals_summary).trim()
+                  ? 'Last vitals (this handoff)'
+                  : 'Last vitals',
+                (notes.vitals_summary && String(notes.vitals_summary).trim()) || patient.vitals_summary,
+              ],
               ['Weight', patient.weight],
               ['IV access', patient.iv_access],
               ['Diet', patient.diet],
@@ -193,7 +234,7 @@ function PatientInfoScreen({ patient, approvedNotes, onGoToPatients }) {
               nurseId={NURSE.id}
               timestamp={`${approvalDate} — ${approvalTime}`}
               shift="Current session"
-              flags={notes.flags || []}
+              flags={_coerceFlagList(notes.flags || [])}
               summary={notes.sbar?.situation || ''}
               isCurrent
             />
@@ -306,12 +347,16 @@ function SbarBlock({ sbar }) {
 function InfoGrid({ rows }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {rows.map(([label, value]) => (
+      {rows.map(([label, value]) => {
+        const v = value == null ? '' : String(value);
+        const mono = v.includes('mg') || v.includes('BP');
+        return (
         <div key={label} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
           <div style={{ width: 120, flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#94A3B8', paddingTop: 1 }}>{label}</div>
-          <div style={{ flex: 1, fontSize: 13, color: '#334155', lineHeight: 1.55, fontFamily: value.includes('mg') || value.includes('BP') ? "'JetBrains Mono',monospace" : 'inherit', fontSize: 13 }}>{value}</div>
+          <div style={{ flex: 1, fontSize: 13, color: '#334155', lineHeight: 1.55, fontFamily: mono ? "'JetBrains Mono',monospace" : 'inherit', fontSize: 13 }}>{v}</div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

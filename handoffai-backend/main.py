@@ -13,6 +13,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 import db
 from models import DecodeRequest, DecodeResponse
+from normalize import normalize_patients_for_ui
 from prompts import SYSTEM_PROMPT, STRICTER_RETRY_ADDENDUM
 
 logging.basicConfig(
@@ -156,6 +157,7 @@ async def decode(req: DecodeRequest):
         raise HTTPException(status_code=502, detail=f"Schema validation: {e}")
 
     response_dict = validated.model_dump()
+    normalize_patients_for_ui(response_dict.get("patients", []))
     handoff_id, patient_row_ids = await db.save_handoff(
         req.raw_text,
         response_dict,
