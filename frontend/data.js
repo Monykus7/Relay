@@ -1,4 +1,4 @@
-// HandoffAI — Data layer
+// Relay — Data layer
 
 var NURSE = {
   name: "Sarah Mitchell",
@@ -22,7 +22,7 @@ var PATIENTS = [
     attending: "Dr. R. Okafor",
     allergies: ["None known"],
     code_status: "Full code",
-    last_handoff: "07:02 AM",
+    last_relay: "07:02 AM",
     key_flag: { level: "amber", label: "K+ low — recheck AM" },
     medications: ["Oxycodone 5mg PO q4h PRN", "Ketorolac 15mg IV q6h", "KCl 40mEq PO x1 (completed)", "Enoxaparin 40mg SQ daily", "Ondansetron 4mg IV PRN nausea"],
     vitals_summary: "BP 118/74, HR 78, Temp 37.1°C, SpO2 97% RA",
@@ -44,7 +44,7 @@ var PATIENTS = [
     attending: "Dr. L. Haines",
     allergies: ["None known"],
     code_status: "Full code",
-    last_handoff: "06:48 AM",
+    last_relay: "06:48 AM",
     key_flag: { level: "red", label: "BP soft — SBP 95/60" },
     medications: ["Furosemide (Lasix) drip 5mg/hr IV", "Lisinopril 10mg PO daily (held)", "Carvedilol 6.25mg PO BID (held)", "Potassium Chloride 20mEq PO BID"],
     vitals_summary: "BP 95/60 (0200), HR 92, Temp 37.0°C, SpO2 94% 2L NC",
@@ -66,7 +66,7 @@ var PATIENTS = [
     attending: "Dr. M. Torres",
     allergies: ["Penicillin (PCN) — rash"],
     code_status: "Full code",
-    last_handoff: "06:55 AM",
+    last_relay: "06:55 AM",
     key_flag: { level: "red", label: "Allergy: PCN" },
     medications: ["Morphine 4mg IV q4h PRN pain", "Ondansetron 4mg IV q6h PRN", "NS 125mL/hr IV maintenance"],
     vitals_summary: "BP 132/86, HR 104, Temp 37.8°C, SpO2 98% RA",
@@ -88,7 +88,7 @@ var PATIENTS = [
     attending: "Dr. P. Nwachukwu",
     allergies: ["Sulfa drugs — hives"],
     code_status: "Full code",
-    last_handoff: "07:15 AM",
+    last_relay: "07:15 AM",
     key_flag: { level: "amber", label: "Heparin gtt — PTT due 0600" },
     medications: ["Heparin gtt — per protocol", "Aspirin 81mg PO daily (post-72hr)", "Atorvastatin 80mg PO daily", "Metoprolol 25mg PO BID"],
     vitals_summary: "BP 148/88, HR 68, Temp 36.9°C, SpO2 96% RA",
@@ -110,7 +110,7 @@ var PATIENTS = [
     attending: "Dr. L. Haines",
     allergies: ["None known"],
     code_status: "Full code",
-    last_handoff: "07:10 AM",
+    last_relay: "07:10 AM",
     key_flag: { level: "green", label: "Likely D/C tomorrow" },
     medications: ["Ceftriaxone 1g IV daily", "Azithromycin 500mg PO daily", "Albuterol neb q4h PRN", "Acetaminophen 650mg PO q6h PRN"],
     vitals_summary: "BP 122/78, HR 82, Temp 37.0°C (afebrile since 1800), SpO2 96% RA",
@@ -338,7 +338,7 @@ var SESSION_HISTORY = {
   ],
 };
 
-var SYSTEM_PROMPT = `You are a clinical handoff assistant for nurses. The user provides a raw nurse-to-nurse dictation for a single patient. Return ONLY valid JSON in this shape — no preamble, no markdown:
+var SYSTEM_PROMPT = `You are a clinical relay assistant for nurses. The user provides a raw nurse-to-nurse dictation for a single patient. Return ONLY valid JSON in this shape — no preamble, no markdown:
 
 {
   "sbar": {

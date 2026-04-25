@@ -1,4 +1,4 @@
-// HandoffAI — Screen 1: Patient List (Nurse Dashboard)
+// Relay — Screen 1: Patient List (Nurse Dashboard)
 
 function PatientListScreen({ onSelectPatient }) {
   const flagOrder = { red: 0, amber: 1, green: 2 };
@@ -48,7 +48,7 @@ function PatientListScreen({ onSelectPatient }) {
         {/* Section header */}
         <div style={{ marginBottom: 16, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <h1 style={{ fontSize: 16, fontWeight: 600, color: '#0F172A', margin: 0 }}>Your patients</h1>
-          <span style={{ fontSize: 12, color: '#94A3B8' }}>Select a patient to begin handoff</span>
+          <span style={{ fontSize: 12, color: '#94A3B8' }}>Select a patient to begin a relay</span>
         </div>
 
         {/* Patient tiles */}
@@ -109,7 +109,7 @@ function PatientTile({ patient, onSelect }) {
           <FlagChip flag={patient.key_flag} small />
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#94A3B8' }}>
             <IconClock size={11} />
-            Last handoff {patient.last_handoff}
+            Last relay {patient.last_relay}
           </span>
         </div>
       </div>

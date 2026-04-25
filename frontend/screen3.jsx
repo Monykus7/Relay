@@ -1,8 +1,8 @@
-// HandoffAI — Screen 3: Notes Preview (Review & Approve)
+// Relay — Screen 3: Notes Preview (Review & Approve)
 
 function NotesPreviewScreen({ patient, notes, transcript, onBack, onApprove }) {
   const [editedNotes, setEditedNotes] = React.useState(() =>
-    normalizeHandoffNotesForEditor(JSON.parse(JSON.stringify(notes)))
+    normalizeRelayNotesForEditor(JSON.parse(JSON.stringify(notes)))
   );
   const [checkedLoops, setCheckedLoops] = React.useState({});
   const [approved, setApproved] = React.useState(false);
@@ -75,7 +75,7 @@ function NotesPreviewScreen({ patient, notes, transcript, onBack, onApprove }) {
           fontSize: 13, color: '#92400E', display: 'flex', alignItems: 'center', gap: 8,
         }}>
           <IconEdit size={13} />
-          All fields are editable. Review carefully before approving — this becomes the official handoff record.
+          All fields are editable. Review carefully before approving — this becomes the official relay record.
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

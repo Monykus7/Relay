@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HandoffAI — Clinical Handoff Intelligence</title>
+  <title>Relay — Clinical Relay Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -35,7 +35,7 @@ window.NURSE = {
 window.PATIENTS = [
   { id:"p1", room:"412", name:"Margaret Chen", age:67, gender:"F", dob:"03/14/1957", mrn:"MRN-00412",
     diagnosis:"Post-op Total Knee Replacement, Day 1", admit_date:"04/23/2026", attending:"Dr. R. Okafor",
-    allergies:["None known"], code_status:"Full code", last_handoff:"07:02 AM",
+    allergies:["None known"], code_status:"Full code", last_relay:"07:02 AM",
     key_flag:{ level:"amber", label:"K+ low — recheck AM" },
     medications:["Oxycodone 5mg PO q4h PRN","Ketorolac 15mg IV q6h","KCl 40mEq PO x1 (completed)","Enoxaparin 40mg SQ daily","Ondansetron 4mg IV PRN nausea"],
     vitals_summary:"BP 118/74, HR 78, Temp 37.1°C, SpO2 97% RA", weight:"72 kg",
@@ -43,7 +43,7 @@ window.PATIENTS = [
     precautions:["Fall precautions","DVT prophylaxis"] },
   { id:"p2", room:"414", name:"Arjun Patel", age:72, gender:"M", dob:"11/02/1953", mrn:"MRN-00414",
     diagnosis:"CHF Exacerbation", admit_date:"04/21/2026", attending:"Dr. L. Haines",
-    allergies:["None known"], code_status:"Full code", last_handoff:"06:48 AM",
+    allergies:["None known"], code_status:"Full code", last_relay:"06:48 AM",
     key_flag:{ level:"red", label:"BP soft — SBP 95/60" },
     medications:["Furosemide (Lasix) drip 5mg/hr IV","Lisinopril 10mg PO daily (held)","Carvedilol 6.25mg PO BID (held)","Potassium Chloride 20mEq PO BID"],
     vitals_summary:"BP 95/60 (0200), HR 92, Temp 37.0°C, SpO2 94% 2L NC", weight:"88 kg (admit 90 kg)",
@@ -51,7 +51,7 @@ window.PATIENTS = [
     precautions:["Fall precautions","Fluid restriction"] },
   { id:"p3", room:"416", name:"Donna Johnson", age:54, gender:"F", dob:"07/29/1971", mrn:"MRN-00416",
     diagnosis:"Acute Abdominal Pain — Surgical Consult Pending", admit_date:"04/23/2026", attending:"Dr. M. Torres",
-    allergies:["Penicillin (PCN) — rash"], code_status:"Full code", last_handoff:"06:55 AM",
+    allergies:["Penicillin (PCN) — rash"], code_status:"Full code", last_relay:"06:55 AM",
     key_flag:{ level:"red", label:"Allergy: PCN" },
     medications:["Morphine 4mg IV q4h PRN pain","Ondansetron 4mg IV q6h PRN","NS 125mL/hr IV maintenance"],
     vitals_summary:"BP 132/86, HR 104, Temp 37.8°C, SpO2 98% RA", weight:"68 kg",
@@ -59,7 +59,7 @@ window.PATIENTS = [
     precautions:["NPO","PCN allergy — verify all antibiotics"] },
   { id:"p4", room:"418", name:"Carlos Garcia", age:61, gender:"M", dob:"05/11/1964", mrn:"MRN-00418",
     diagnosis:"Ischemic Stroke (s/p tPA)", admit_date:"04/22/2026", attending:"Dr. P. Nwachukwu",
-    allergies:["Sulfa drugs — hives"], code_status:"Full code", last_handoff:"07:15 AM",
+    allergies:["Sulfa drugs — hives"], code_status:"Full code", last_relay:"07:15 AM",
     key_flag:{ level:"amber", label:"Heparin gtt — PTT due 0600" },
     medications:["Heparin gtt — per protocol","Aspirin 81mg PO daily (post-72hr)","Atorvastatin 80mg PO daily","Metoprolol 25mg PO BID"],
     vitals_summary:"BP 148/88, HR 68, Temp 36.9°C, SpO2 96% RA", weight:"81 kg",
@@ -67,7 +67,7 @@ window.PATIENTS = [
     precautions:["Neuro checks q2h","Aspiration precautions","Fall precautions"] },
   { id:"p5", room:"420", name:"Bridget O'Brien", age:48, gender:"F", dob:"09/04/1977", mrn:"MRN-00420",
     diagnosis:"Community-acquired Pneumonia", admit_date:"04/22/2026", attending:"Dr. L. Haines",
-    allergies:["None known"], code_status:"Full code", last_handoff:"07:10 AM",
+    allergies:["None known"], code_status:"Full code", last_relay:"07:10 AM",
     key_flag:{ level:"green", label:"Likely D/C tomorrow" },
     medications:["Ceftriaxone 1g IV daily","Azithromycin 500mg PO daily","Albuterol neb q4h PRN","Acetaminophen 650mg PO q6h PRN"],
     vitals_summary:"BP 122/78, HR 82, Temp 37.0°C (afebrile since 1800), SpO2 96% RA", weight:"64 kg",
@@ -209,7 +209,7 @@ window.SESSION_HISTORY = {
   ]
 };
 
-window.SYSTEM_PROMPT = "You are a clinical handoff assistant for nurses. Return ONLY valid JSON with keys: sbar (situation/background/assessment/recommendation), flags (level/label/source), open_loops (task/owner/deadline), abbreviations_used. No preamble, no markdown.";
+window.SYSTEM_PROMPT = "You are a clinical relay assistant for nurses. Return ONLY valid JSON with keys: sbar (situation/background/assessment/recommendation), flags (level/label/source), open_loops (task/owner/deadline), abbreviations_used. No preamble, no markdown.";
 </script>
 
 <!-- Shared UI components -->

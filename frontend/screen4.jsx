@@ -1,4 +1,4 @@
-// HandoffAI — Screen 4: Patient Info
+// Relay — Screen 4: Patient Info
 
 function _deriveShiftFromTime(iso) {
   const h = new Date(iso).getHours();
@@ -144,7 +144,7 @@ function PatientInfoScreen({ patient, approvedNotes, onGoToPatients }) {
             <div>Code status: <strong style={{ color: '#334155' }}>{patient.code_status}</strong></div>
           </div>
           <div style={{ marginLeft: 'auto' }}>
-            <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4, textAlign: 'right' }}>Handoff recorded</div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4, textAlign: 'right' }}>Relay recorded</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', textAlign: 'right' }}>{approvalDate}</div>
             <div style={{ fontSize: 12, color: '#64748B', textAlign: 'right' }}>{approvalTime} by {NURSE.name}</div>
           </div>
@@ -182,7 +182,7 @@ function PatientInfoScreen({ patient, approvedNotes, onGoToPatients }) {
             <InfoGrid rows={[
               [
                 notes.vitals_summary && String(notes.vitals_summary).trim()
-                  ? 'Last vitals (this handoff)'
+                  ? 'Last vitals (this relay)'
                   : 'Last vitals',
                 (notes.vitals_summary && String(notes.vitals_summary).trim()) || patient.vitals_summary,
               ],

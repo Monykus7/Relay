@@ -1,4 +1,4 @@
-// HandoffAI — App root (state machine)
+// Relay — App root (state machine)
 
 function App() {
   // screen: 'patient-list' | 'recording' | 'notes-preview' | 'patient-info'
@@ -11,7 +11,7 @@ function App() {
   // Restore last session from localStorage
   React.useEffect(() => {
     try {
-      const saved = localStorage.getItem('handoffai:session');
+      const saved = localStorage.getItem('relay:session');
       if (saved) {
         const s = JSON.parse(saved);
         // Only restore to patient-list; don't drop mid-flow state on reload
@@ -30,7 +30,7 @@ function App() {
   // Persist state
   React.useEffect(() => {
     if (screen === 'patient-info' && selectedPatient && approvedNotes) {
-      localStorage.setItem('handoffai:session', JSON.stringify({
+      localStorage.setItem('relay:session', JSON.stringify({
         screen: 'patient-info',
         patientId: selectedPatient.id,
         approvedNotes,
@@ -57,7 +57,7 @@ function App() {
   };
 
   const handleGoToPatients = () => {
-    localStorage.removeItem('handoffai:session');
+    localStorage.removeItem('relay:session');
     setScreen('patient-list');
     setSelectedPatient(null);
     setGeneratedNotes(null);

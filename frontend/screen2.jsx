@@ -1,4 +1,26 @@
-// HandoffAI — Screen 2: Recording
+// Relay — Screen 2: Recording
+
+/** Prefer vitals-like content from the live transcript so the summary panel updates while dictating. */
+function extractVitalsFromTranscript(text) {
+  if (!text || typeof text !== 'string') return null;
+  const t = text.trim();
+  if (!t) return null;
+  const markers = /\b(BP|SBP|DBP|MAP|blood pressure|HR|heart rate|bpm|SpO|SpO2|pulse ox|Temp|temperature|RR|resp|°C|°F|\bRA\b|\bNC\b|on room air|liters?)\b/i;
+  const hasNums = /\d/;
+  const chunks = t.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    const c = chunks[i];
+    if (markers.test(c) && hasNums.test(c)) return c.length > 320 ? c.slice(-320) : c;
+  }
+  const sents = t.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  for (let i = sents.length - 1; i >= 0; i--) {
+    const s = sents[i];
+    if (markers.test(s) && hasNums.test(s)) return s.length > 320 ? s.slice(-320) : s;
+  }
+  const bp = [...t.matchAll(/\b(?:BP|SBP)\s*\d{2,3}\s*\/\s*\d{2,3}[^.!?\n]{0,160}/gi)];
+  if (bp.length) return bp[bp.length - 1][0].trim();
+  return null;
+}
 
 function RecordingScreen({ patient, onBack, onProcessed }) {
   const [recording, setRecording] = React.useState(false);
@@ -7,6 +29,11 @@ function RecordingScreen({ patient, onBack, onProcessed }) {
   const [speechSupported] = React.useState(() => 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
   const recognitionRef = React.useRef(null);
   const transcriptRef = React.useRef(null);
+
+  const displayedVitals = React.useMemo(
+    () => extractVitalsFromTranscript(transcript) || patient.vitals_summary,
+    [transcript, patient.vitals_summary]
+  );
 
   // Auto-scroll transcript
   React.useEffect(() => {
@@ -87,7 +114,7 @@ function RecordingScreen({ patient, onBack, onProcessed }) {
         open_loops: patientRecord.open_loops || [],
         abbreviations_used: patientRecord.abbreviations_used || [],
         vitals_summary: patientRecord.vitals_summary || null,
-        _handoff_id: data.id,
+        _relay_id: data.id,
         _record_id: patientRecord.id,
       };
 
@@ -97,7 +124,7 @@ function RecordingScreen({ patient, onBack, onProcessed }) {
       console.error('Backend decode failed, falling back to mock:', err);
       setProcessing(false);
       const fallback = MOCK_NOTES[patient.id] || MOCK_NOTES['p1'];
-      onProcessed({ ...fallback, _handoff_id: null, _record_id: null }, transcript);
+      onProcessed({ ...fallback, _relay_id: null, _record_id: null }, transcript);
     }
   };
 
@@ -157,7 +184,7 @@ function RecordingScreen({ patient, onBack, onProcessed }) {
           {/* Vitals */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Last vitals</div>
-            <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.8, fontFamily: "'JetBrains Mono',monospace" }}>{patient.vitals_summary}</div>
+            <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.8, fontFamily: "'JetBrains Mono',monospace" }}>{displayedVitals}</div>
           </div>
 
           {/* Precautions */}
@@ -207,7 +234,7 @@ function RecordingScreen({ patient, onBack, onProcessed }) {
                   ? 'Listening… speak clearly into your microphone.'
                   : speechSupported
                     ? 'Press the mic button to start recording, or type directly here.'
-                    : 'Paste or type your handoff notes here.'}
+                    : 'Paste or type your relay notes here.'}
               </span>
             )}
             {recording && (
@@ -251,7 +278,7 @@ function RecordingScreen({ patient, onBack, onProcessed }) {
               <textarea
                 value={transcript}
                 onChange={e => setTranscript(e.target.value)}
-                placeholder="Or type / paste your handoff notes here…"
+                placeholder="Or type / paste your relay notes here…"
                 style={{
                   width: '100%', background: 'none', border: 'none', outline: 'none',
                   fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: '#64748B',

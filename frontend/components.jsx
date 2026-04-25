@@ -1,4 +1,4 @@
-// HandoffAI — Shared UI Components
+// Relay — Shared UI Components
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 function IconMic({ size = 18 }) {
@@ -189,7 +189,7 @@ function AppHeader({ onBack, backLabel, title, subtitle, right }) {
         {!onBack && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#0F766E', display: 'inline-block' }}></span>
-            <span style={{ fontSize: 17, fontWeight: 600, color: '#0F172A', letterSpacing: '-0.01em' }}>HandoffAI</span>
+            <span style={{ fontSize: 17, fontWeight: 600, color: '#0F172A', letterSpacing: '-0.01em' }}>Relay</span>
           </div>
         )}
         {title && onBack && (
@@ -199,7 +199,7 @@ function AppHeader({ onBack, backLabel, title, subtitle, right }) {
           </div>
         )}
         {!onBack && (
-          <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, paddingLeft: 16 }}>Voice-first clinical handoff intelligence.</div>
+          <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, paddingLeft: 16 }}>Voice-first clinical relay intelligence.</div>
         )}
       </div>
       {right && <div style={{ flexShrink: 0 }}>{right}</div>}
@@ -236,7 +236,7 @@ function CollapsibleSection({ title, defaultOpen = false, children, accent }) {
 }
 
 /** Normalize API/mock notes so flags/open_loops match editor + FlagChip shape. */
-function normalizeHandoffNotesForEditor(notes) {
+function normalizeRelayNotesForEditor(notes) {
   if (!notes || typeof notes !== 'object') return {};
   const out = { ...notes };
   out.flags = (Array.isArray(out.flags) ? out.flags : []).map((f) => {
@@ -300,5 +300,5 @@ Object.assign(window, {
   IconArrowLeft, IconUser, IconClock, IconAlertCircle, IconEdit, IconUsers,
   // Components
   FlagChip, OwnerBadge, AppHeader, CollapsibleSection, Waveform,
-  normalizeHandoffNotesForEditor,
+  normalizeRelayNotesForEditor,
 });
