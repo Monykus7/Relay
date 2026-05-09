@@ -6,7 +6,7 @@ A nurse can dictate or type a natural handoff note, and Relay converts it into a
 
 ## Why Relay
 
-Shift handoff quality directly impacts continuity of care. Relay is designed to reduce information loss by:
+Shift handoff quality directly impacts continuity of care. Ensuring handoffs are accurate is key to patient health. Relay is designed to reduce information loss by:
 
 - capturing natural nurse dictation quickly,
 - structuring it into a consistent handoff format,
@@ -53,24 +53,24 @@ Shift handoff quality directly impacts continuity of care. Relay is designed to 
 ```text
 Relay/
 +-- frontend/
-¦   +-- HandoffAI.html
-¦   +-- app.jsx
-¦   +-- components.jsx
-¦   +-- data.js
-¦   +-- screen1.jsx
-¦   +-- screen2.jsx
-¦   +-- screen3.jsx
-¦   +-- screen4.jsx
+ï¿½   +-- HandoffAI.html
+ï¿½   +-- app.jsx
+ï¿½   +-- components.jsx
+ï¿½   +-- data.js
+ï¿½   +-- screen1.jsx
+ï¿½   +-- screen2.jsx
+ï¿½   +-- screen3.jsx
+ï¿½   +-- screen4.jsx
 +-- handoffai-backend/
-¦   +-- main.py
-¦   +-- db.py
-¦   +-- models.py
-¦   +-- prompts.py
-¦   +-- normalize.py
-¦   +-- schema.sql
-¦   +-- requirements.txt
-¦   +-- .env.example
-¦   +-- README.md
+ï¿½   +-- main.py
+ï¿½   +-- db.py
+ï¿½   +-- models.py
+ï¿½   +-- prompts.py
+ï¿½   +-- normalize.py
+ï¿½   +-- schema.sql
+ï¿½   +-- requirements.txt
+ï¿½   +-- .env.example
+ï¿½   +-- README.md
 +-- requirements.txt
 +-- README.md
 ```
